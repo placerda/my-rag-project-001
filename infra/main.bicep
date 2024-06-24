@@ -19,6 +19,8 @@ param location string
 //      "value": "myGroupName"
 // }
 param resourceGroupName string = ''
+param appServiceName string = ''
+param appServicePlanName string = ''
 
 var abbrs = loadJsonContent('./abbreviations.json')
 
@@ -48,11 +50,38 @@ resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   tags: tags
 }
 
-// Add resources to be provisioned below.
-// A full example that leverages azd bicep modules can be seen in the todo-python-mongo template:
-// https://github.com/Azure-Samples/todo-python-mongo/tree/main/infra
+module appServicePlan './core/host/appserviceplan.bicep' =  {
+  name: 'appserviceplan'
+  scope: rg
+  params: {
+    name: !empty(appServicePlanName) ? resourceGroupName : '${abbrs.webServerFarms}${environmentName}${resourceToken}'
+    location: location
+    tags: tags
+    sku: {
+      name: 'P0v3'
+      capacity: 1
+    }
+    kind: 'linux'
+  }
+}
 
-
+module appiService  'core/host/appservice.bicep'  = {
+  name: 'appService'
+  scope: rg
+  params: {
+    name: !empty(appServiceName) ? resourceGroupName : '${abbrs.webSitesAppService}${environmentName}${resourceToken}'
+    appCommandLine: 'python ./app.py'
+    location: location
+    tags: union(tags, { 'azd-service-name': apiServiceName })
+    appServicePlanId: appServicePlan.outputs.id
+    runtimeName: 'python'
+    runtimeVersion: '3.12'
+    scmDoBuildDuringDeployment: true
+    appSettings: {
+      LOGLEVEL: 'INFO'
+    } 
+  }
+}
 
 // Add outputs from the deployment here, if needed.
 //
