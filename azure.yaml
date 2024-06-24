@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+# Name of the application.
+name: azd-starter
+services:
+  ## An example for a python API service.
+  ## The service is named 'python-api'.
+  ## The language is 'python'.
+  ## The source code is located in the project (azure.yaml) directory.
+  ## The service will be hosted on Azure App Service.
+  python-api:
+    language: python
+    project: ./
+    host: appservice
