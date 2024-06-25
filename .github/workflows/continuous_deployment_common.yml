@@ -9,7 +9,8 @@ on:
 
 jobs:
   provision_and_deploy:
-    environment: ${{ inputs.environment }}
+    environment:
+      name: ${{ inputs.environment }}    
     runs-on: ubuntu-latest    
     env:
       AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
