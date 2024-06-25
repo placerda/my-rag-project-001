@@ -34,7 +34,33 @@ jobs:
           name: pytest-results-3.11
           path: junit/test-results-3.11.xml
         if: always()
-          
+
+      - name: Display XML report
+        run: |
+          apt-get install -y libxml2-utils
+          xmllint --format junit/test-results-3.11.xml
+  
+      - name: Display test results summary
+        run: |
+          python - <<EOF
+          import xml.etree.ElementTree as ET
+          tree = ET.parse('junit/test-results-3.11.xml')
+          root = tree.getroot()
+          for testsuite in root:
+              print(f"Test Suite: {testsuite.attrib['name']}")
+              print(f"Tests: {testsuite.attrib['tests']}")
+              print(f"Errors: {testsuite.attrib['errors']}")
+              print(f"Failures: {testsuite.attrib['failures']}")
+              print(f"Skipped: {testsuite.attrib['skipped']}")
+              for testcase in testsuite:
+                  print(f" - {testcase.attrib['name']}: {testcase.attrib['classname']} ({testcase.attrib['time']}s)")
+          EOF        
+
+
+
+
+
+
   provision:
     runs-on: ubuntu-latest
     environment: dev
