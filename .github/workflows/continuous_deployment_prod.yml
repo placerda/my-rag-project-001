@@ -10,7 +10,7 @@ on:
 jobs:
   provision-and-deploy:
     runs-on: ubuntu-latest
-    environment: qa
+    environment: prod
     env:
       AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
       AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
