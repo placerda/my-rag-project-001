@@ -8,7 +8,7 @@ on:
       - '**.md' 
 
 jobs:
-  provision_and_deploy:
+  provision-and-deploy:
     runs-on: ubuntu-latest
     environment: dev
     env:

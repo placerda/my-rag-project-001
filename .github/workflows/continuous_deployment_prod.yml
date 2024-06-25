@@ -8,7 +8,7 @@ on:
       - '**.md' 
 
 jobs:
-  provision_and_deploy:
+  provision-and-deploy:
     runs-on: ubuntu-latest
     environment: qa
     env:
@@ -80,8 +80,8 @@ jobs:
           echo "🔗 [View Resources Deployed Here]($deep_link)" >> $GITHUB_STEP_SUMMARY
 
   smoke-test:
-    needs: provision_and_deploy
-    if: ${{ needs.provision_and_deploy.result == 'success' }}
+    needs: provision-and-deploy
+    if: ${{ needs.provision-and-deploy.result == 'success' }}
     runs-on: ubuntu-latest
     environment: prod
     steps:
