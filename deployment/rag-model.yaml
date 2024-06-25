@@ -1,7 +1,7 @@
 $schema: https://azuremlschemas.azureedge.net/latest/model.schema.json
-path: ../rag-flow
+path: ../rag_flow
 stage: Production
-description: register the "rag-flow/" folder as a custom model
+description: register the "rag_flow/" folder as a custom model
 properties:
   # Following are properties only for chat flow 
   # endpoint detail UI Test tab needs this property to know it's a chat flow
