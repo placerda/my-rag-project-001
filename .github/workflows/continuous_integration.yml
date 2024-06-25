@@ -34,11 +34,6 @@ jobs:
           name: pytest-results-3.11
           path: junit/test-results-3.11.xml
         if: always()
-
-      - name: Display XML report
-        run: |
-          apt-get install -y libxml2-utils
-          xmllint --format junit/test-results-3.11.xml
   
       - name: Display test results summary
         run: |
