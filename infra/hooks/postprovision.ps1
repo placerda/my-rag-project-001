@@ -39,7 +39,7 @@ azd env get-values > .env
 Write-Host "Script execution completed successfully."
 
 Write-Host 'Installing dependencies from "requirements.txt"'
-python -m pip install -r rag-flow/requirements.txt > $null
+python -m pip install -r rag_flow/requirements.txt > $null
 
 if ($indexSampleData -eq $true) {
     # populate data
