@@ -1,4 +1,4 @@
-from rag_flow.chat_request import get_response
+from chat_request import get_response
 
 def test_get_response_valid_question():
     assert True
