@@ -1,40 +1,16 @@
-name: Continuous Integration Pipeline
+name: Continuous Deployment Pipeline QA
 
 on:
-  pull_request:
+  push:
     branches:
-      - develop
+      - feature/*
     paths-ignore:
       - '**.md' 
 
 jobs:
-
-  unit_testing:
+  provision_and_deploy:
     runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python 
-        uses: actions/setup-python@v5
-        with:
-          python-version: 3.11
-      # Install pip and pytest
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pytest
-      - name: Test with pytest
-        run: pytest tests/ --doctest-modules --junitxml=junit/test-results-3.11.xml
-      - name: Upload pytest test results
-        uses: actions/upload-artifact@v4
-        with:
-          name: pytest-results-3.11
-          path: junit/test-results-3.11.xml
-        if: always()
-          
-  provision:
-    runs-on: ubuntu-latest
-    environment: dev
+    environment: qa
     env:
       AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
       AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
@@ -81,7 +57,7 @@ jobs:
         uses: azure/CLI@v2
         with:
           inlineScript: |
-            az account set --subscription ${{env.AZURE_SUBSCRIPTION_ID}}
+            az account set --subscription ${{ env.AZURE_SUBSCRIPTION_ID }}
           
       - name: Provision Infrastructure
         run: azd provision --no-prompt
@@ -89,7 +65,14 @@ jobs:
           AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
           AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      
+    
+      - name: Deploy Application
+        run: azd deploy --no-prompt
+        env:
+          AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}          
+
       - name: Build Deep Link
         id: deep_link
         run: |
@@ -101,14 +84,14 @@ jobs:
           echo "🔗 [View Resources Deployed Here](${{ steps.deep_link.outputs.deep_link }})" >> $GITHUB_STEP_SUMMARY
 
   evaluate:
-    needs: provision
-    if: ${{ needs.provision.result == 'success' }}
+    needs: provision_and_deploy
+    if: ${{ needs.provision_and_deploy.result == 'success' }}
     runs-on: ubuntu-latest
-    environment: dev
+    environment: qa
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Evaluate
         run: |
-          echo "TODO: PR evaluations"
-        shell: bash
+          echo "TODO: QA evaluations"
+        shell: bash          

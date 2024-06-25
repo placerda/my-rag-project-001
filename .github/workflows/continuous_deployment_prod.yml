@@ -1,20 +1,16 @@
-name: Continuous Deployment Pipeline Common
+name: Continuous Deployment Pipeline PROD
 
 on:
-  workflow_call:
-    inputs:
-      environment:
-        required: true
-        type: string
-    secrets:
-        AZURE_CREDENTIALS:
-          required: true
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md' 
 
 jobs:
   provision_and_deploy:
-    environment:
-      name: ${{ inputs.environment }}
-    runs-on: ubuntu-latest    
+    runs-on: ubuntu-latest
+    environment: qa
     env:
       AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
       AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
@@ -86,3 +82,16 @@ jobs:
         if: ${{ success() }}
         run: |
           echo "🔗 [View Resources Deployed Here](${{ steps.deep_link.outputs.deep_link }})" >> $GITHUB_STEP_SUMMARY
+
+  smoke-test:
+    needs: provision_and_deploy
+    if: ${{ needs.provision_and_deploy.result == 'success' }}
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Smoke Test
+        run: |
+            echo "TODO: Smoke tests"
+        shell: bash   
