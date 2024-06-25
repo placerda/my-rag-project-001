@@ -11,4 +11,4 @@ jobs:
   provision_and_deploy:
     uses: ./.github/workflows/continuous_deployment_common.yml
     with:
-      environment: dev
+      environment: 'dev'
