@@ -3,7 +3,7 @@ name: CD QA Pipeline
 on:
   push:
     branches:
-      - feature/*
+      - release/*
     paths-ignore:
       - '**.md' 
 
