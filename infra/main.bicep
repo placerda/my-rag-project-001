@@ -76,7 +76,7 @@ module machineLearningEndpoint './core/host/ml-online-endpoint.bicep' = {
     name: !empty(endpointName) ? endpointName : 'mloe-${resourceToken}'
     location: location
     tags: tags
-    serviceName: 'chat'
+    serviceName: 'rag-flow'
     aiHubName: ai.outputs.hubName
     aiProjectName: ai.outputs.projectName
     keyVaultName: ai.outputs.keyVaultName
