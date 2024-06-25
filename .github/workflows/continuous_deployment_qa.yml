@@ -1,4 +1,4 @@
-name: Continuous Deployment Pipeline QA
+name: CD QA Pipeline
 
 on:
   push:

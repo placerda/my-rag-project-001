@@ -1,4 +1,4 @@
-name: Continuous Deployment Pipeline PROD
+name: CD Prod Pipeline
 
 on:
   push:
