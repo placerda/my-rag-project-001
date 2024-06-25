@@ -22,10 +22,10 @@ hooks:
 
 ################################################################
 # The section below configures the new `ai.endpoint` resource 
-# used for the Azure AI based chat service (application)
+# used for the Azure AI based rag-flow service (application)
 ################################################################
 services:
-  chat:
+  rag-flow:
     host: ai.endpoint
     language: python
     config:
