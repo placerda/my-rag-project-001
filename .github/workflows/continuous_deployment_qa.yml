@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: AZD Login
+      - name: azd Login
         run: |
           info=$(echo $AZURE_CREDENTIALS | jq -r '.')
           echo "::add-mask::$(echo $info | jq -r '.clientSecret')"
@@ -40,7 +40,7 @@ jobs:
         env:
           AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: AZ Login
+      - name: az Login
         run: |
           info=$(echo $AZURE_CREDENTIALS | jq -r '.')
           echo "::add-mask::$(echo $info | jq -r '.clientSecret')"
