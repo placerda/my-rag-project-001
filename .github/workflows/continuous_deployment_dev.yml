@@ -12,6 +12,13 @@ jobs:
   get-azure-credentials:
     runs-on: ubuntu-latest    
     environment: dev
+    env:
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+    steps:
+      - name: AZD Login
+        run: |
+          echo 'getting azure credentials...'
+        shell: bash      
     outputs: 
       AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
 
