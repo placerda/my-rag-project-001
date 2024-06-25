@@ -6,11 +6,14 @@ on:
       environment:
         required: true
         type: string
+    secrets:
+        AZURE_CREDENTIALS:
+          required: true
 
 jobs:
   provision_and_deploy:
     environment:
-      name: ${{ inputs.environment }}    
+      name: ${{ inputs.environment }}
     runs-on: ubuntu-latest    
     env:
       AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}

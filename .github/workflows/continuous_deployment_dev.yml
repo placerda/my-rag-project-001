@@ -8,7 +8,17 @@ on:
       - '**.md' 
 
 jobs:
-  provision_and_deploy:
+
+  get-azure-credentials:
+    runs-on: ubuntu-latest    
+    environment: dev
+    outputs: 
+      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+
+  execute-continuous-deployment-common:
     uses: ./.github/workflows/continuous_deployment_common.yml
+    needs: get-azure-credentials
     with:
       environment: 'dev'
+    secrets:
+      AZURE_CREDENTIALS: ${{ needs.get-azure-credentials.outputs.AZURE_CREDENTIALS  }}
