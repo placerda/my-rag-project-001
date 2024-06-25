@@ -37,7 +37,6 @@ jobs:
         with:
           name: Pytest Results
           path: junit/test-results-3.11.xml
-          reporter: junit
           fail-on-error: true         
 
   provision:
