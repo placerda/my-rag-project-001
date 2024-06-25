@@ -22,7 +22,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pytest pytest-github-actions-annotate-failures
+          pip install pytest
       - name: Test with pytest
         run: pytest tests/ --doctest-modules --junitxml=junit/test-results-3.11.xml
       - name: Upload pytest test results
@@ -31,7 +31,31 @@ jobs:
           name: pytest-results-3.11
           path: junit/test-results-3.11.xml
         if: always()
-
+      - name: Display test results
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const xml2js = require('xml2js');
+            const parser = new xml2js.Parser();
+            const xml = fs.readFileSync('junit/test-results-3.11.xml', 'utf8');
+            parser.parseString(xml, (err, result) => {
+              if (err) {
+                core.setFailed(err);
+                return;
+              }
+              const tests = result.testsuites.testsuite[0].testcase;
+              tests.forEach(test => {
+                console.log(`Test: ${test.$.name}`);
+                if (test.failure) {
+                  console.log(`Status: Failed`);
+                  console.log(`Message: ${test.failure[0]._}`);
+                } else {
+                  console.log(`Status: Passed`);
+                }
+              });
+            });
+          
   provision:
     runs-on: ubuntu-latest
     environment: dev
