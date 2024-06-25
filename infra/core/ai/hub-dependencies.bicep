@@ -7,16 +7,15 @@ param keyVaultName string
 param storageAccountName string
 @description('Name of the OpenAI cognitive services')
 param openAiName string
-@description('Array of OpenAI model deployments')
 param openAiModelDeployments array = []
 @description('Name of the Log Analytics workspace')
 param logAnalyticsName string = ''
 @description('Name of the Application Insights instance')
-param applicationInsightsName string = ''
+param appInsightsName string = ''
 @description('Name of the container registry')
 param containerRegistryName string = ''
 @description('Name of the Azure Cognitive Search service')
-param searchServiceName string = ''
+param searchName string = ''
 
 module keyVault '../security/keyvault.bicep' = {
   name: 'keyvault'
@@ -103,13 +102,13 @@ module logAnalytics '../monitor/loganalytics.bicep' =
     }
   }
 
-module applicationInsights '../monitor/applicationinsights.bicep' =
-  if (!empty(applicationInsightsName) && !empty(logAnalyticsName)) {
-    name: 'applicationInsights'
+module appInsights '../monitor/applicationinsights.bicep' =
+  if (!empty(appInsightsName) && !empty(logAnalyticsName)) {
+    name: 'appInsights'
     params: {
       location: location
       tags: tags
-      name: applicationInsightsName
+      name: appInsightsName
       logAnalyticsWorkspaceId: !empty(logAnalyticsName) ? logAnalytics.outputs.id : ''
     }
   }
@@ -135,13 +134,17 @@ module cognitiveServices '../ai/cognitiveservices.bicep' = {
   }
 }
 
-module searchService '../search/search-services.bicep' =
-  if (!empty(searchServiceName)) {
-    name: 'searchService'
+// NN: Location hardcoded for Azure AI Search (semantic ranker)
+//     TODO: refactor into environment variables
+module search '../search/search-services.bicep' =
+  if (!empty(searchName)) {
+    name: 'search'
     params: {
-      location: location
+      location: 'eastus'
       tags: tags
-      name: searchServiceName
+      name: searchName
+      semanticSearch: 'free'
+      disableLocalAuth: true
     }
   }
 
@@ -156,8 +159,8 @@ output containerRegistryId string = !empty(containerRegistryName) ? containerReg
 output containerRegistryName string = !empty(containerRegistryName) ? containerRegistry.outputs.name : ''
 output containerRegistryEndpoint string = !empty(containerRegistryName) ? containerRegistry.outputs.loginServer : ''
 
-output applicationInsightsId string = !empty(applicationInsightsName) ? applicationInsights.outputs.id : ''
-output applicationInsightsName string = !empty(applicationInsightsName) ? applicationInsights.outputs.name : ''
+output appInsightsId string = !empty(appInsightsName) ? appInsights.outputs.id : ''
+output appInsightsName string = !empty(appInsightsName) ? appInsights.outputs.name : ''
 output logAnalyticsWorkspaceId string = !empty(logAnalyticsName) ? logAnalytics.outputs.id : ''
 output logAnalyticsWorkspaceName string = !empty(logAnalyticsName) ? logAnalytics.outputs.name : ''
 
@@ -165,6 +168,6 @@ output openAiId string = cognitiveServices.outputs.id
 output openAiName string = cognitiveServices.outputs.name
 output openAiEndpoint string = cognitiveServices.outputs.endpoints['OpenAI Language Model Instance API']
 
-output searchServiceId string = !empty(searchServiceName) ? searchService.outputs.id : ''
-output searchServiceName string = !empty(searchServiceName) ? searchService.outputs.name : ''
-output searchServiceEndpoint string = !empty(searchServiceName) ? searchService.outputs.endpoint : ''
+output searchId string = !empty(searchName) ? search.outputs.id : ''
+output searchName string = !empty(searchName) ? search.outputs.name : ''
+output searchEndpoint string = !empty(searchName) ? search.outputs.endpoint : ''

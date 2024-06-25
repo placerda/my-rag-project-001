@@ -12,20 +12,16 @@ param keyVaultName string
 param storageAccountName string
 @description('The Open AI resource name.')
 param openAiName string
-@description('The Open AI connection name.')
-param openAiConnectionName string
 @description('The Open AI model deployments.')
 param openAiModelDeployments array = []
 @description('The Log Analytics resource name.')
 param logAnalyticsName string = ''
 @description('The Application Insights resource name.')
-param applicationInsightsName string = ''
+param appInsightsName string = ''
 @description('The Container Registry resource name.')
 param containerRegistryName string = ''
 @description('The Azure Search resource name.')
-param searchServiceName string = ''
-@description('The Azure Search connection name.')
-param searchConnectionName string = ''
+param searchName string = ''
 param tags object = {}
 
 module hubDependencies '../ai/hub-dependencies.bicep' = {
@@ -36,11 +32,11 @@ module hubDependencies '../ai/hub-dependencies.bicep' = {
     keyVaultName: keyVaultName
     storageAccountName: storageAccountName
     containerRegistryName: containerRegistryName
-    applicationInsightsName: applicationInsightsName
+    appInsightsName: appInsightsName
     logAnalyticsName: logAnalyticsName
     openAiName: openAiName
     openAiModelDeployments: openAiModelDeployments
-    searchServiceName: searchServiceName
+    searchName: searchName
   }
 }
 
@@ -54,11 +50,9 @@ module hub '../ai/hub.bicep' = {
     keyVaultId: hubDependencies.outputs.keyVaultId
     storageAccountId: hubDependencies.outputs.storageAccountId
     containerRegistryId: hubDependencies.outputs.containerRegistryId
-    applicationInsightsId: hubDependencies.outputs.applicationInsightsId
+    appInsightsId: hubDependencies.outputs.appInsightsId
     openAiName: hubDependencies.outputs.openAiName
-    openAiConnectionName: openAiConnectionName
-    aiSearchName: hubDependencies.outputs.searchServiceName
-    aiSearchConnectionName: searchConnectionName
+    aiSearchName: hubDependencies.outputs.searchName
   }
 }
 
@@ -91,7 +85,7 @@ output keyVaultName string = hubDependencies.outputs.keyVaultName
 output keyVaultEndpoint string = hubDependencies.outputs.keyVaultEndpoint
 
 // Application Insights
-output applicationInsightsName string = hubDependencies.outputs.applicationInsightsName
+output appInsightsName string = hubDependencies.outputs.appInsightsName
 output logAnalyticsWorkspaceName string = hubDependencies.outputs.logAnalyticsWorkspaceName
 
 // Container Registry
@@ -106,5 +100,5 @@ output openAiName string = hubDependencies.outputs.openAiName
 output openAiEndpoint string = hubDependencies.outputs.openAiEndpoint
 
 // Search
-output searchServiceName string = hubDependencies.outputs.searchServiceName
-output searchServiceEndpoint string = hubDependencies.outputs.searchServiceEndpoint
+output searchName string = hubDependencies.outputs.searchName
+output searchEndpoint string = hubDependencies.outputs.searchEndpoint

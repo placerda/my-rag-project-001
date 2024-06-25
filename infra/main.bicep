@@ -1,9 +1,5 @@
 targetScope = 'subscription'
 
-// The main bicep module to provision Azure resources.
-// For a more complete walkthrough to understand how this file works with azd,
-// see https://learn.microsoft.com/en-us/azure/developer/azure-developer-cli/make-azd-compatible?pivots=azd-create
-
 @minLength(1)
 @maxLength(64)
 @description('Name of the the environment which is used to generate a short unique hash used in all resources.')
@@ -13,35 +9,30 @@ param environmentName string
 @description('Primary location for all resources')
 param location string
 
-// Optional parameters to override the default azd resource naming conventions.
-// Add the following to main.parameters.json to provide values:
-// "resourceGroupName": {
-//      "value": "myGroupName"
-// }
+param appInsightsName string = ''
+param openAiName string = ''
+param containerRegistryName string = ''
+param keyVaultName string = ''
 param resourceGroupName string = ''
-param appServiceName string = ''
-param appServicePlanName string = ''
+param searchServiceName string = ''
+param storageAccountName string = ''
+param endpointName string = ''
+param aiResourceGroupName string = ''
+param aiProjectName string = ''
+param aiHubName string = ''
+param logAnalyticsName string = ''
+@description('Id of the user or app to assign application roles')
+param principalId string = ''
+param principalType string = 'User'
 
 var abbrs = loadJsonContent('./abbreviations.json')
+var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
 
 // tags that should be applied to all resources.
 var tags = {
   // Tag all resources with the environment name.
   'azd-env-name': environmentName
 }
-
-// Generate a unique token to be used in naming resources.
-// Remove linter suppression after using.
-#disable-next-line no-unused-vars
-var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
-
-// Name of the service defined in azure.yaml
-// A tag named azd-service-name with this value should be applied to the service host resource, such as:
-//   Microsoft.Web/sites for appservice, function
-// Example usage:
-//   tags: union(tags, { 'azd-service-name': apiServiceName })
-#disable-next-line no-unused-vars
-var apiServiceName = 'python-api'
 
 // Organize resources in a resource group
 resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
@@ -50,46 +41,163 @@ resource rg 'Microsoft.Resources/resourceGroups@2021-04-01' = {
   tags: tags
 }
 
-module appServicePlan './core/host/appserviceplan.bicep' =  {
-  name: 'appserviceplan'
-  scope: rg
+var openAiConfig = loadYamlContent('./ai.yaml')
+var openAiModelDeployments = array(contains(openAiConfig, 'deployments') ? openAiConfig.deployments : [])
+
+module ai 'core/host/ai-environment.bicep' = {
+  name: 'ai'
+  scope: resourceGroup(!empty(aiResourceGroupName) ? aiResourceGroupName : rg.name)
   params: {
-    name: !empty(appServicePlanName) ? resourceGroupName : '${abbrs.webServerFarms}${environmentName}${resourceToken}'
     location: location
     tags: tags
-    sku: {
-      name: 'P0v3'
-      capacity: 1
-    }
-    kind: 'linux'
+    hubName: !empty(aiHubName) ? aiHubName : 'ai-hub-${resourceToken}'
+    projectName: !empty(aiProjectName) ? aiProjectName : 'ai-project-${resourceToken}'
+    logAnalyticsName: !empty(logAnalyticsName)
+      ? logAnalyticsName
+      : '${abbrs.operationalInsightsWorkspaces}${resourceToken}'
+    appInsightsName: !empty(appInsightsName) ? appInsightsName : '${abbrs.insightsComponents}${resourceToken}'
+    containerRegistryName: !empty(containerRegistryName)
+      ? containerRegistryName
+      : '${abbrs.containerRegistryRegistries}${resourceToken}'
+    keyVaultName: !empty(keyVaultName) ? keyVaultName : '${abbrs.keyVaultVaults}${resourceToken}'
+    storageAccountName: !empty(storageAccountName)
+      ? storageAccountName
+      : '${abbrs.storageStorageAccounts}${resourceToken}'
+    openAiName: !empty(openAiName) ? openAiName : 'aoai-${resourceToken}'
+    openAiModelDeployments: openAiModelDeployments
+    searchName: !empty(searchServiceName) ? searchServiceName : 'srch-${resourceToken}'
   }
 }
 
-module appiService  'core/host/appservice.bicep'  = {
-  name: 'appService'
+module machineLearningEndpoint './core/host/ml-online-endpoint.bicep' = {
+  name: 'endpoint'
+  scope: resourceGroup(!empty(aiResourceGroupName) ? aiResourceGroupName : rg.name)
+  params: {
+    name: !empty(endpointName) ? endpointName : 'mloe-${resourceToken}'
+    location: location
+    tags: tags
+    serviceName: 'chat'
+    aiHubName: ai.outputs.hubName
+    aiProjectName: ai.outputs.projectName
+    keyVaultName: ai.outputs.keyVaultName
+  }
+}
+
+module userAcrRolePush 'core/security/role.bicep' = {
+  name: 'user-acr-role-push'
   scope: rg
   params: {
-    name: !empty(appServiceName) ? resourceGroupName : '${abbrs.webSitesAppService}${environmentName}${resourceToken}'
-    appCommandLine: 'python ./app.py'
-    location: location
-    tags: union(tags, { 'azd-service-name': apiServiceName })
-    appServicePlanId: appServicePlan.outputs.id
-    runtimeName: 'python'
-    runtimeVersion: '3.12'
-    scmDoBuildDuringDeployment: true
-    appSettings: {
-      LOGLEVEL: 'INFO'
-    } 
+    principalId: principalId
+    roleDefinitionId: '8311e382-0749-4cb8-b61a-304f252e45ec'
+    principalType: principalType
   }
 }
 
-// Add outputs from the deployment here, if needed.
-//
-// This allows the outputs to be referenced by other bicep deployments in the deployment pipeline,
-// or by the local machine as a way to reference created resources in Azure for local development.
-// Secrets should not be added here.
-//
-// Outputs are automatically saved in the local azd environment .env file.
-// To see these outputs, run `azd env get-values`,  or `azd env get-values --output json` for json output.
-output AZURE_LOCATION string = location
+module userAcrRolePull 'core/security/role.bicep' = {
+  name: 'user-acr-role-pull'
+  scope: rg
+  params: {
+    principalId: principalId
+    roleDefinitionId: '7f951dda-4ed3-4680-a7ca-43fe172d538d'
+    principalType: principalType
+  }
+}
+
+module openaiRoleUser 'core/security/role.bicep' = if (!empty(principalId)) {
+  scope: rg
+  name: 'openai-role-user'
+  params: {
+    principalId: principalId
+    roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' //Cognitive Services OpenAI User
+    principalType: principalType
+  }
+}
+
+module openaiRoleBackend 'core/security/role.bicep' = {
+  scope: rg
+  name: 'openai-role-backend'
+  params: {
+    principalId: principalId
+    roleDefinitionId: '5e0bd9bd-7b93-4f28-af87-19fc36ad61bd' //Cognitive Services OpenAI User
+    principalType: principalType
+  }
+}
+
+module userRoleDataScientist 'core/security/role.bicep' = {
+  name: 'user-role-data-scientist'
+  scope: rg
+  params: {
+    principalId: principalId
+    roleDefinitionId: 'f6c7c914-8db3-469d-8ca1-694a8f32e121'
+    principalType: principalType
+  }
+}
+
+module userRoleSecretsReader 'core/security/role.bicep' = {
+  name: 'user-role-secrets-reader'
+  scope: rg
+  params: {
+    principalId: principalId
+    roleDefinitionId: 'ea01e6af-a1c1-4350-9563-ad00f8c72ec5'
+    principalType: principalType
+  }
+}
+
+module userAiSearchRole 'core/security/role.bicep' = if (!empty(principalId)) {
+  scope: rg
+  name: 'user-ai-search-index-data-contributor'
+  params: {
+    principalId: principalId
+    roleDefinitionId: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' //Search Index Data Contributor
+    principalType: principalType
+  }
+}
+
+module aiSearchRole 'core/security/role.bicep' = {
+  scope: rg
+  name: 'ai-search-index-data-contributor'
+  params: {
+    principalId: machineLearningEndpoint.outputs.principalId
+    roleDefinitionId: '8ebe5a00-799e-43f5-93ac-243d3dce84a7' //Search Index Data Contributor
+    principalType: 'ServicePrincipal'
+  }
+}
+
+module userAiSearchServiceContributor 'core/security/role.bicep' = if (!empty(principalId)) {
+  scope: rg
+  name: 'user-ai-search-service-contributor'
+  params: {
+    principalId: principalId
+    roleDefinitionId: '7ca78c08-252a-4471-8644-bb5ff32d4ba0' //Search Service Contributor
+    principalType: principalType
+  }
+}
+
+module aiSearchServiceContributor 'core/security/role.bicep' = {
+  scope: rg
+  name: 'ai-search-service-contributor'
+  params: {
+    principalId: machineLearningEndpoint.outputs.principalId
+    roleDefinitionId: '7ca78c08-252a-4471-8644-bb5ff32d4ba0' //Search Service Contributor
+    principalType: 'ServicePrincipal'
+  }
+}
+
+// output the names of the resources
 output AZURE_TENANT_ID string = tenant().tenantId
+output AZURE_RESOURCE_GROUP string = rg.name
+
+output AZUREAI_HUB_NAME string = ai.outputs.hubName
+output AZUREAI_PROJECT_NAME string = ai.outputs.projectName
+
+output AZURE_OPENAI_NAME string = ai.outputs.openAiName
+output AZURE_OPENAI_ENDPOINT string = ai.outputs.openAiEndpoint
+
+output AZURE_SEARCH_NAME string = ai.outputs.searchName
+output AZURE_SEARCH_ENDPOINT string = ai.outputs.searchEndpoint
+
+output AZURE_CONTAINER_REGISTRY_NAME string = ai.outputs.containerRegistryName
+output AZURE_CONTAINER_REGISTRY_ENDPOINT string = ai.outputs.containerRegistryEndpoint
+
+output AZURE_KEY_VAULT_NAME string = ai.outputs.keyVaultName
+output AZURE_KEY_VAULT_ENDPOINT string = ai.outputs.keyVaultEndpoint
