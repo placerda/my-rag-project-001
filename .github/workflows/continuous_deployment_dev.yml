@@ -1,0 +1,14 @@
+name: Continuous Deployment Pipeline Dev
+
+on:
+  push:
+    branches:
+      - develop
+    paths-ignore:
+      - '**.md' 
+
+jobs:
+  provision_and_deploy:
+    uses: ./.github/workflows/continuous_deployment_common.yml
+    with:
+      environment: dev
