@@ -26,7 +26,8 @@ jobs:
           pip install -r requirements.txt              
       - name: Test with pytest
         env:
-          PYTHONPATH: flow      
+          PYTHONPATH: flow
+          PYTHONWARNINGS: ignore::DeprecationWarning,ignore::RemovedInMarshmallow4Warning
         run: pytest tests/ --doctest-modules --junitxml=junit/test-results-3.11.xml
       - name: Upload pytest test results
         uses: actions/upload-artifact@v4
@@ -34,27 +35,6 @@ jobs:
           name: pytest-results-3.11
           path: junit/test-results-3.11.xml
         if: always()
-  
-      - name: Display test results summary
-        run: |
-          python - <<EOF
-          import xml.etree.ElementTree as ET
-          tree = ET.parse('junit/test-results-3.11.xml')
-          root = tree.getroot()
-          for testsuite in root:
-              print(f"Test Suite: {testsuite.attrib['name']}")
-              print(f"Tests: {testsuite.attrib['tests']}")
-              print(f"Errors: {testsuite.attrib['errors']}")
-              print(f"Failures: {testsuite.attrib['failures']}")
-              print(f"Skipped: {testsuite.attrib['skipped']}")
-              for testcase in testsuite:
-                  print(f" - {testcase.attrib['name']}: {testcase.attrib['classname']} ({testcase.attrib['time']}s)")
-          EOF        
-
-
-
-
-
 
   provision:
     runs-on: ubuntu-latest
