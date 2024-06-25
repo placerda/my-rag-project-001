@@ -23,7 +23,7 @@ param aiHubName string = ''
 param logAnalyticsName string = ''
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
-param principalType string = 'User'
+param principalType string = 'ServicePrincipal'
 
 var abbrs = loadJsonContent('./abbreviations.json')
 var resourceToken = toLower(uniqueString(subscription().id, environmentName, location))
