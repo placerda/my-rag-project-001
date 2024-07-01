@@ -25,7 +25,7 @@ param runtimeVersion string
 param extensionVersion string = '~4'
 
 // Microsoft.Web/sites Properties
-param kind string = 'functionapp,linux'
+param kind string = 'functionapp,linux,container'
 
 // Microsoft.Web/sites/config
 param allowedOrigins array = []

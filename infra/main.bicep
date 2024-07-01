@@ -16,11 +16,12 @@ param keyVaultName string = ''
 param resourceGroupName string = ''
 param searchServiceName string = ''
 param storageAccountName string = ''
-param endpointName string = ''
 param aiResourceGroupName string = ''
 param aiProjectName string = ''
 param aiHubName string = ''
 param logAnalyticsName string = ''
+param appServicePlanName string = ''
+param functionAppName string = ''
 @description('Id of the user or app to assign application roles')
 param principalId string = ''
 param principalType string = 'ServicePrincipal'
@@ -69,19 +70,45 @@ module ai 'core/host/ai-environment.bicep' = {
   }
 }
 
-module machineLearningEndpoint './core/host/ml-online-endpoint.bicep' = {
-  name: 'endpoint'
-  scope: resourceGroup(!empty(aiResourceGroupName) ? aiResourceGroupName : rg.name)
+module appServicePlan './core/host/appserviceplan.bicep' =  {
+  name: 'appserviceplan'
+  scope: rg
   params: {
-    name: !empty(endpointName) ? endpointName : 'mloe-${resourceToken}'
+    name: !empty(appServicePlanName) ? resourceGroupName : '${abbrs.webServerFarms}${environmentName}${resourceToken}'
     location: location
     tags: tags
-    serviceName: 'rag-flow'
-    aiHubName: ai.outputs.hubName
-    aiProjectName: ai.outputs.projectName
-    keyVaultName: ai.outputs.keyVaultName
+    sku: {
+      name: 'Y1'
+      tier: 'Dynamic'
+    }
+    kind: 'linux'
   }
 }
+
+
+module flow './core/host/functions.bicep' = {
+  name: 'flow'
+  scope: rg
+  params: {
+    name: !empty(functionAppName) ? resourceGroupName : '${abbrs.webSitesFunctions}${environmentName}${resourceToken}'
+    location: location
+    tags: union(tags, { 'azd-service-name': 'flow' })
+    appSettings:{
+        FUNCTIONS_WORKER_RUNTIME: 'custom'
+    }
+    applicationInsightsName: !empty(appInsightsName) ? appInsightsName : '${abbrs.insightsComponents}${resourceToken}'
+    appServicePlanId: appServicePlan.outputs.id
+    keyVaultName: keyVaultName
+    storageAccountName: !empty(storageAccountName)
+      ? '${storageAccountName}flow'
+      : '${abbrs.storageStorageAccounts}${resourceToken}flow'
+      runtimeName: 'custom'
+      runtimeVersion: ''
+  }
+}
+
+
+
 
 module userAcrRolePush 'core/security/role.bicep' = {
   name: 'user-acr-role-push'

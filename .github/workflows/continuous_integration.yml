@@ -1,14 +1,13 @@
 name: CI Pipeline
 
 on:
-  pull_request:
+  push:
     branches:
       - develop
     paths-ignore:
       - '**.md' 
 
 jobs:
-
   unit-testing:
     runs-on: ubuntu-latest
     environment: dev
@@ -36,79 +35,39 @@ jobs:
           path: junit/test-results-3.11.xml
         if: always()
 
-  provision:
-    runs-on: ubuntu-latest
-    environment: dev
-    env:
-      AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
-      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Install azd
-        uses: Azure/setup-azd@v1.0.0
-      
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: azd Login
-        run: |
-          info=$(echo $AZURE_CREDENTIALS | jq -r '.')
-          echo "::add-mask::$(echo $info | jq -r '.clientSecret')"
-          azd auth login \
-            --client-id "$(echo $info | jq -r '.clientId')" \
-            --client-secret "$(echo $info | jq -r '.clientSecret')" \
-            --tenant-id "$(echo $info | jq -r '.tenantId')"
-        shell: bash
-        env:
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: az Login
-        run: |
-          info=$(echo $AZURE_CREDENTIALS | jq -r '.')
-          echo "::add-mask::$(echo $info | jq -r '.clientSecret')"
-          az login \
-            --service-principal \
-            --username "$(echo $info | jq -r '.clientId')" \
-            --password "$(echo $info | jq -r '.clientSecret')" \
-            --tenant "$(echo $info | jq -r '.tenantId')"
-        shell: bash
-        env:
-          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Set az account
-        uses: azure/CLI@v2
-        with:
-          inlineScript: |
-            az account set --subscription ${{env.AZURE_SUBSCRIPTION_ID}}
-          
-      - name: Provision Infrastructure
-        run: azd provision --no-prompt
-        env:
-          AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
-          AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      
-      - name: GitHub Summary Step
-        if: ${{ success() }}
-        run: |
-          deep_link=https://portal.azure.com/#@/resource/subscriptions/${{ env.AZURE_SUBSCRIPTION_ID }}/resourceGroups/rg-${{ vars.AZURE_ENV_NAME }}/overview
-          echo "🔗 [View Resources Deployed Here]($deep_link)" >> $GITHUB_STEP_SUMMARY
-
-  evaluate:
-    needs: provision
-    if: ${{ needs.provision.result == 'success' }}
+  build-flow:
     runs-on: ubuntu-latest
     environment: dev
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Evaluate
+      - name: Build
         run: |
-          echo "TODO: PR evaluations"
+          echo "TODO: Build Flow"
         shell: bash
+
+  ai-assisted-evaluation:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          echo "TODO: AI-assisted Evaluation"
+        shell: bash
+      
+  register-flow:
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          echo "TODO: Register Flow"
+        shell: bash
+
+
+  # TODO: Call CD pipeline to provision and deploy the application
+
