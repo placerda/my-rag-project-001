@@ -35,15 +35,10 @@ jobs:
   #         path: junit/test-results-3.11.xml
   #       if: always()
 
-  build-flow:
+  build-flow-docker-files:
     # needs: unit-testing
     runs-on: ubuntu-latest
     environment: dev
-    env:
-      AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
-      AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-      AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,15 +59,12 @@ jobs:
       - name: Install required dependencies
         run: pip install -r flow/requirements.txt
 
-      - name: Build Application
+      - name: Create Flow Docker files
         run: |
+          # TODO: REVISAR SE PRECISA DE Connections
           # reference: https://github.com/microsoft/promptflow/tree/main/examples/tutorials/flow-deploy/azure-app-service
           pf flow build --source flow --output dist --format docker
-        env:
-            AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
-            AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
-            AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      
+
       - name: Upload dist as artifact
         uses: actions/upload-artifact@v3
         with:
@@ -80,8 +72,10 @@ jobs:
           path: dist/
 
 
-  ai-assisted-evaluation:
-    needs: build-flow
+  build-and-evaluate-flow:
+    needs: build-flow-docker-files
+    env:
+      IMAGE_NAME: rag-project
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -98,18 +92,27 @@ jobs:
         run: |
           ls -l dist/
         shell: bash
-      
-  register-flow:
-    needs: ai-assisted-evaluation    
-    runs-on: ubuntu-latest
-    environment: dev
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Build
+
+      - name: Build Docker ImageCreate
         run: |
-          echo "TODO: Register Flow"
-        shell: bash
+          docker build dist -t ${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Evaluate Flow
+        run: |
+          # TODO: REVISAR P QUE FAZER COM ESSA KEY
+          docker run -p 8080:8080 -e OPEN_AI_CONNECTION_API_KEY=123 -e PROMPTFLOW_SERVING_ENGINE=fastapi -e PROMPTFLOW_WORKER_NUM=8 ${{ env.IMAGE_NAME }}-serve     
+
+  # register-flow:
+  #   needs: ai-assisted-evaluation    
+  #   runs-on: ubuntu-latest
+  #   environment: dev
+  #   steps:
+  #     - name: Checkout
+  #       uses: actions/checkout@v4
+  #     - name: Build
+  #       run: |
+  #         echo "TODO: Register Flow"
+  #       shell: bash
 
 
   # TODO: Call CD pipeline to provision and deploy the application
