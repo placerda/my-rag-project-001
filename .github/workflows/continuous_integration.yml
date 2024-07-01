@@ -36,6 +36,7 @@ jobs:
         if: always()
 
   build-flow:
+    needs: unit-testing
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -47,6 +48,7 @@ jobs:
         shell: bash
 
   ai-assisted-evaluation:
+    needs: build-flow
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -58,6 +60,7 @@ jobs:
         shell: bash
       
   register-flow:
+    needs: ai-assisted-evaluation    
     runs-on: ubuntu-latest
     environment: dev
     steps:
