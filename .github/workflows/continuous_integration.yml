@@ -47,7 +47,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        
+
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -56,8 +56,8 @@ jobs:
       - name: Install promptflow CLI
         run: |
           python -m pip install --upgrade pip
-          pip install promptflow-cli
-  
+          pip install promptflow --upgrade
+
       - name: Verify promptflow CLI installation
         run: pf --version  
       - name: Build Application
