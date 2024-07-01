@@ -60,6 +60,10 @@ jobs:
 
       - name: Verify promptflow CLI installation
         run: pf --version  
+
+      - name: Install required dependencies
+        run: pip install -r flow/requirements.txt
+        
       - name: Build Application
         run: |
           # reference: https://github.com/microsoft/promptflow/tree/main/examples/tutorials/flow-deploy/azure-app-service
