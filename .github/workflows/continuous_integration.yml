@@ -63,7 +63,6 @@ jobs:
         run: |
           # reference: https://github.com/microsoft/promptflow/tree/main/examples/tutorials/flow-deploy/azure-app-service
           pf flow build --source flow --output dist --format docker
-          mkdir dist/connections
 
       - name: Upload dist as artifact
         uses: actions/upload-artifact@v3
@@ -187,6 +186,7 @@ jobs:
       - name: List contents of dist
         run: |
           ls -l dist/
+          mkdir dist/connections
         shell: bash
 
       - name: Build Docker ImageCreate
