@@ -36,23 +36,25 @@ jobs:
 
   build-and-evaluate-flow:
     needs: unit-testing
+    outputs:
+      image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
     env:
       IMAGE_NAME: rag-project
     runs-on: ubuntu-latest
     environment: dev
     steps:
+      
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Check for AZURE_ENV_NAME and AZURE_CREDENTIALS
+      - name: Check env variables
         run: |
           if [ -z "${{ vars.AZURE_ENV_NAME }}" ] || [ -z "${{ secrets.AZURE_CREDENTIALS }}" ]; then
-            echo "AZURE_ENV_NAME or AZURE_CREDENTIALS is not set in the repo settings. Please set them and try again."
+            echo "Make sure AZURE_ENV_NAME, AZURE_SUBSCRIPTION_ID, AZURE_LOCATION and AZURE_CREDENTIALS are set in the GitHub environment."
             exit 1
           else
             echo "AZURE_ENV_NAME is set to ${{ vars.AZURE_ENV_NAME }}"
           fi
-
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -62,7 +64,7 @@ jobs:
       - name: Install azd
         uses: Azure/setup-azd@v1.0.0
   
-      - name: Login to Azure Developer CLI and get env variables
+      - name: Get azd env variables
         run: |
           echo "Logging to AZD..."
           AZURE_CREDENTIALS=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .)
@@ -78,7 +80,7 @@ jobs:
           export LOCATION=${{ vars.AZURE_LOCATION }}
           echo "LOCATION=$LOCATION" >> $GITHUB_ENV
           echo "LOCATION=$LOCATION"
-          
+
           azd init -e ${{ vars.AZURE_ENV_NAME }} -l $LOCATION -s $SUBSCRIPTION_ID
           azd env refresh
           echo "azd ${{ vars.AZURE_ENV_NAME }} environment variables"
@@ -144,7 +146,7 @@ jobs:
         with:
           python-version: 3.8
     
-      - name: Install promptflow CLI
+      - name: Install Promptflow CLI
         run: |
           python -m pip install --upgrade pip
           pip install promptflow --upgrade
@@ -153,22 +155,26 @@ jobs:
       - name: Install required dependencies
         run: pip install -r flow/requirements.txt
 
-      - name: Create Flow Docker files
+      - name: Create flow docker files
         run: |
           # reference: https://github.com/microsoft/promptflow/tree/main/examples/tutorials/flow-deploy/azure-app-service
           pf flow build --source flow --output dist --format docker
 
-      - name: Upload dist as artifact
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dist-artifact
           path: dist/
 
-      - name: Create Docker image
-        run: |
-          docker build dist -t ${{ env.IMAGE_NAME }}:${{ github.sha }}
+      - name: Set image tag
+        id: set_image_tag
+        run: echo "::set-output name=image_tag::${{ env.IMAGE_NAME }}:${{ github.sha }}"
 
-      - name: Start Flow
+      - name: Build docker image
+        run: |
+          docker build dist -t ${{ steps.set_image_tag.outputs.image_tag }}
+
+      - name: Start flow
         run: |
           docker run -d -p 8080:8080 \
             -e PROMPTFLOW_WORKER_NUM=8 \
@@ -178,24 +184,23 @@ jobs:
             -e AZURE_OPENAI_API_VERSION=$AZURE_OPENAI_API_VERSION \
             -e AZURE_OPENAI_ENDPOINT=$AZURE_OPENAI_ENDPOINT \
             -e AZURE_DEPLOYMENT_NAME=$AZURE_DEPLOYMENT_NAME \
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ steps.set_image_tag.outputs.image_tag }}          
 
       - name: Evaluate Flow
         run: |
           echo "TODO: Evaluate flow"    
 
-        # register-flow:
-        #   needs: ai-assisted-evaluation    
-        #   runs-on: ubuntu-latest
-        #   environment: dev
-        #   steps:
-        #     - name: Checkout
-        #       uses: actions/checkout@v4
-        #     - name: Build
-        #       run: |
-        #         echo "TODO: Register Flow"
-        #       shell: bash
-
+  register-flow:
+    needs: build-and-evaluate-flow    
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build
+        run: |
+          echo "TODO: Register ${{ needs.build-and-deploy.outputs.image_tag }}"
+        shell: bash
 
         # TODO: Call CD pipeline to provision and deploy the application
 
