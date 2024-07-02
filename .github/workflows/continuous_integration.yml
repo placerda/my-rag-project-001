@@ -26,12 +26,12 @@ jobs:
         env:
           PYTHONPATH: flow
           PYTHONWARNINGS: ignore::DeprecationWarning,ignore::RemovedInMarshmallow4Warning
-        run: pytest tests/ --doctest-modules --junitxml=junit/test-results-3.11.xml
+        run: pytest tests/ --doctest-modules --junitxml=junit/test-results-3.8.xml
       - name: Upload pytest test results
         uses: actions/upload-artifact@v4
         with:
-          name: pytest-results-3.11
-          path: junit/test-results-3.11.xml
+          name: pytest-results-3.8
+          path: junit/test-results-3.8.xml
         if: always()
 
   build-and-evaluate-flow:
@@ -163,17 +163,17 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dist-artifact
+          name: build-artifacts
           path: dist/
 
       - name: Set image tag
         id: set_image_tag
-        run: echo "::set-output name=image_tag::${{ env.IMAGE_NAME }}:${{ github.sha }}"
+        run: echo "image_tag=${{ env.IMAGE_NAME }}:${{ github.sha }}" >> $GITHUB_ENV
 
       - name: Build docker image
         run: |
-          docker build dist -t ${{ steps.set_image_tag.outputs.image_tag }}
-
+          docker build dist -t ${{ env.image_tag }}
+          
       - name: Start flow
         run: |
           docker run -d -p 8080:8080 \
@@ -184,7 +184,7 @@ jobs:
             -e AZURE_OPENAI_API_VERSION=$AZURE_OPENAI_API_VERSION \
             -e AZURE_OPENAI_ENDPOINT=$AZURE_OPENAI_ENDPOINT \
             -e AZURE_DEPLOYMENT_NAME=$AZURE_DEPLOYMENT_NAME \
-            ${{ steps.set_image_tag.outputs.image_tag }}          
+            ${{ env.image_tag }}         
 
       - name: Evaluate Flow
         run: |
@@ -199,7 +199,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Build
         run: |
-          echo "TODO: Register ${{ needs.build-and-deploy.outputs.image_tag }}"
+          echo "TODO: Register ${{ needs.build-and-evaluate-flow.outputs.image_tag }}"
         shell: bash
 
         # TODO: Call CD pipeline to provision and deploy the application
