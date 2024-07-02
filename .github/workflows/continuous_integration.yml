@@ -61,9 +61,9 @@ jobs:
 
       - name: Create Flow Docker files
         run: |
-          # TODO: REVISAR SE PRECISA DE Connections
           # reference: https://github.com/microsoft/promptflow/tree/main/examples/tutorials/flow-deploy/azure-app-service
           pf flow build --source flow --output dist --format docker
+          mkdir dist/connections
 
       - name: Upload dist as artifact
         uses: actions/upload-artifact@v3
@@ -79,9 +79,105 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     steps:
+
+      - name: Check for AZURE_ENV_NAME and AZURE_CREDENTIALS
+        run: |
+          if [ -z "${{ vars.AZURE_ENV_NAME }}" ] || [ -z "${{ secrets.AZURE_CREDENTIALS }}" ]; then
+            echo "AZURE_ENV_NAME or AZURE_CREDENTIALS is not set in the repo settings. Please set them and try again."
+            exit 1
+          else
+            echo "AZURE_ENV_NAME is set to ${{ vars.AZURE_ENV_NAME }}"
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
   
+      - name: Install azd
+        uses: Azure/setup-azd@v1.0.0
+  
+      - name: Login to Azure Developer CLI
+        run: |
+          echo "Logging to AZD..."
+          AZURE_CREDENTIALS=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .)
+          CLIENT_ID=$(echo $AZURE_CREDENTIALS | jq -r .clientId)
+          CLIENT_SECRET=$(echo $AZURE_CREDENTIALS | jq -r .clientSecret)
+          TENANT_ID=$(echo $AZURE_CREDENTIALS | jq -r .tenantId)
+          azd auth login --client-id $CLIENT_ID --client-secret $CLIENT_SECRET --tenant-id $TENANT_ID        
+
+      - name: Get environment variables from azd
+        run: |
+            AZURE_CREDENTIALS=$(echo '${{ secrets.AZURE_CREDENTIALS }}' | jq -r .)
+            SUBSCRIPTION_ID=${{ vars.AZURE_SUBSCRIPTION_ID }}
+            echo "SUBSCRIPTION_ID=$SUBSCRIPTION_ID" >> $GITHUB_ENV
+            echo "SUBSCRIPTION_ID=$SUBSCRIPTION_ID"  
+            export LOCATION=${{ vars.AZURE_LOCATION }}
+            echo "LOCATION=$LOCATION" >> $GITHUB_ENV
+            echo "LOCATION=$LOCATION"   
+            azd init -e ${{ vars.AZURE_ENV_NAME }} -l $LOCATION -s $SUBSCRIPTION_ID
+            azd env refresh
+            echo "azd ${{ vars.AZURE_ENV_NAME }} environment variables"
+
+            export AZURE_RESOURCE_GROUP_NAME=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZURE_RESOURCE_GROUP_NAME | cut -d'=' -f2 | tr -d '"')
+            echo "AZURE_RESOURCE_GROUP_NAME=$AZURE_RESOURCE_GROUP_NAME" >> $GITHUB_ENV
+            echo "AZURE_RESOURCE_GROUP_NAME=$AZURE_RESOURCE_GROUP_NAME"        
+
+            export AZUREAI_HUB_NAME=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZUREAI_HUB_NAME | cut -d'=' -f2 | tr -d '"')
+            echo "AZUREAI_HUB_NAME=$AZUREAI_HUB_NAME" >> $GITHUB_ENV
+            echo "AZUREAI_HUB_NAME=$AZUREAI_HUB_NAME"
+
+            export AZUREAI_PROJECT_NAME=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZUREAI_PROJECT_NAME | cut -d'=' -f2 | tr -d '"')
+            echo "AZUREAI_PROJECT_NAME=$AZUREAI_PROJECT_NAME" >> $GITHUB_ENV
+            echo "AZUREAI_PROJECT_NAME=$AZUREAI_PROJECT_NAME"
+
+            export AZURE_OPENAI_NAME=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZURE_OPENAI_NAME | cut -d'=' -f2 | tr -d '"')
+            echo "AZURE_OPENAI_NAME=$AZURE_OPENAI_NAME" >> $GITHUB_ENV
+            echo "AZURE_OPENAI_NAME=$AZURE_OPENAI_NAME"
+
+            export AZURE_SEARCH_NAME=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZURE_SEARCH_NAME | cut -d'=' -f2 | tr -d '"')
+            echo "AZURE_SEARCH_NAME=$AZURE_SEARCH_NAME" >> $GITHUB_ENV
+            echo "AZURE_SEARCH_NAME=$AZURE_SEARCH_NAME"
+            
+            export AZURE_CONTAINER_REGISTRY_NAME=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZURE_CONTAINER_REGISTRY_NAME | cut -d'=' -f2 | tr -d '"')
+            echo "AZURE_CONTAINER_REGISTRY_NAME=$AZURE_CONTAINER_REGISTRY_NAME" >> $GITHUB_ENV
+            echo "AZURE_CONTAINER_REGISTRY_NAME=$AZURE_CONTAINER_REGISTRY_NAME"
+
+            export AZURE_CONTAINER_REGISTRY_ENDPOINT=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZURE_CONTAINER_REGISTRY_ENDPOINT | cut -d'=' -f2 | tr -d '"')
+            echo "AZURE_CONTAINER_REGISTRY_ENDPOINT=$AZURE_CONTAINER_REGISTRY_ENDPOINT" >> $GITHUB_ENV
+            echo "AZURE_CONTAINER_REGISTRY_ENDPOINT=$AZURE_CONTAINER_REGISTRY_ENDPOINT"
+
+            export AZURE_KEY_VAULT_NAME=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZURE_KEY_VAULT_NAME | cut -d'=' -f2 | tr -d '"')
+            echo "AZURE_KEY_VAULT_NAME=$AZURE_KEY_VAULT_NAME" >> $GITHUB_ENV
+            echo "AZURE_KEY_VAULT_NAME=$AZURE_KEY_VAULT_NAME"
+
+            export AZURE_KEY_VAULT_ENDPOINT=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZURE_KEY_VAULT_ENDPOINT | cut -d'=' -f2 | tr -d '"')
+            echo "AZURE_KEY_VAULT_ENDPOINT=$AZURE_KEY_VAULT_ENDPOINT" >> $GITHUB_ENV
+            echo "AZURE_KEY_VAULT_ENDPOINT=$AZURE_KEY_VAULT_ENDPOINT"
+
+            export AZURE_SEARCH_ENDPOINT=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZURE_SEARCH_ENDPOINT | cut -d'=' -f2 | tr -d '"')
+            echo "AZURE_SEARCH_ENDPOINT=$AZURE_SEARCH_ENDPOINT" >> $GITHUB_ENV
+            echo "AZURE_SEARCH_ENDPOINT=$AZURE_SEARCH_ENDPOINT"
+
+            export AZURE_OPENAI_ENDPOINT=$(azd env get-values -e ${{ vars.AZURE_ENV_NAME }} | grep AZURE_OPENAI_ENDPOINT | cut -d'=' -f2 | tr -d '"')
+            echo "AZURE_OPENAI_ENDPOINT=$AZURE_OPENAI_ENDPOINT" >> $GITHUB_ENV
+            echo "AZURE_OPENAI_ENDPOINT=$AZURE_OPENAI_ENDPOINT"
+
+            export AZURE_DEPLOYMENT_NAME=gpt-4
+            echo "AZURE_DEPLOYMENT_NAME=$AZURE_DEPLOYMENT_NAME" >> $GITHUB_ENV
+            echo "AZURE_DEPLOYMENT_NAME=$AZURE_DEPLOYMENT_NAME"
+
+            export AZURE_EMBEDDING_NAME=text-embedding-ada-002
+            echo "AZURE_EMBEDDING_NAME=$AZURE_EMBEDDING_NAME" >> $GITHUB_ENV
+            echo "AZURE_EMBEDDING_NAME=$AZURE_EMBEDDING_NAME"
+            
+            export AZURE_OPENAI_API_VERSION=2024-02-15-preview
+            echo "AZURE_OPENAI_API_VERSION=$AZURE_OPENAI_API_VERSION" >> $GITHUB_ENV
+            echo "AZURE_OPENAI_API_VERSION=$AZURE_OPENAI_API_VERSION"            
+
       - name: Download dist artifact
         uses: actions/download-artifact@v3
         with:
@@ -97,23 +193,34 @@ jobs:
         run: |
           docker build dist -t ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
+      - name: Run Flow
+        run: |
+          docker run -p 8080:8080 \
+            -e PROMPTFLOW_WORKER_NUM=8 \
+            -e PROMPTFLOW_SERVING_ENGINE=fastapi \
+            -e AZURE_SEARCH_ENDPOINT=$AZURE_SEARCH_ENDPOINT \
+            -e AZURE_EMBEDDING_NAME=$AZURE_EMBEDDING_NAME \
+            -e AZURE_OPENAI_API_VERSION=$AZURE_OPENAI_API_VERSION \
+            -e AZURE_OPENAI_ENDPOINT=$AZURE_OPENAI_ENDPOINT \
+            -e AZURE_DEPLOYMENT_NAME=$AZURE_DEPLOYMENT_NAME \
+            ${{ env.IMAGE_NAME }}-serve
+
       - name: Evaluate Flow
         run: |
-          # TODO: REVISAR P QUE FAZER COM ESSA KEY
-          docker run -p 8080:8080 -e OPEN_AI_CONNECTION_API_KEY=123 -e PROMPTFLOW_SERVING_ENGINE=fastapi -e PROMPTFLOW_WORKER_NUM=8 ${{ env.IMAGE_NAME }}-serve     
+          echo "TODO: Evaluate here"    
 
-  # register-flow:
-  #   needs: ai-assisted-evaluation    
-  #   runs-on: ubuntu-latest
-  #   environment: dev
-  #   steps:
-  #     - name: Checkout
-  #       uses: actions/checkout@v4
-  #     - name: Build
-  #       run: |
-  #         echo "TODO: Register Flow"
-  #       shell: bash
+        # register-flow:
+        #   needs: ai-assisted-evaluation    
+        #   runs-on: ubuntu-latest
+        #   environment: dev
+        #   steps:
+        #     - name: Checkout
+        #       uses: actions/checkout@v4
+        #     - name: Build
+        #       run: |
+        #         echo "TODO: Register Flow"
+        #       shell: bash
 
 
-  # TODO: Call CD pipeline to provision and deploy the application
+        # TODO: Call CD pipeline to provision and deploy the application
 
