@@ -203,7 +203,7 @@ jobs:
             -e AZURE_OPENAI_API_VERSION=$AZURE_OPENAI_API_VERSION \
             -e AZURE_OPENAI_ENDPOINT=$AZURE_OPENAI_ENDPOINT \
             -e AZURE_DEPLOYMENT_NAME=$AZURE_DEPLOYMENT_NAME \
-            ${{ env.IMAGE_NAME }}-serve
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
       - name: Evaluate Flow
         run: |
